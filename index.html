@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forest Animal Rescue Squad - 森林動物救援隊 打地鼠學英文</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Quicksand', system-ui, -apple-system, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .font-game {
+      font-family: 'Fredoka One', 'Quicksand', cursive, sans-serif;
+    }
+    
+    /* 可愛草地泥土洞穴 */
+    .dirt-hole {
+      background: radial-gradient(circle, #543719 45%, #2c1a0a 100%);
+      box-shadow: inset 0 8px 16px rgba(0,0,0,0.6), 0 4px 0 #201306;
+      border: 4px solid #78350f;
+    }
+
+    .mole-container {
+      position: relative;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    /* 地鼠彈出動畫：Q彈果凍效果，100%完全不被遮擋 */
+    .mole {
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform: translateY(125%);
+      will-change: transform;
+    }
+
+    .mole.up {
+      transform: translateY(0%) scale(1);
+    }
+
+    .mole.hit {
+      transform: translateY(10%) scale(0.88) rotate(-10deg);
+      filter: brightness(1.25);
+    }
+
+    /* 狂熱模式彩虹光暈 */
+    .fever-active {
+      animation: rainbowGlow 1s infinite alternate ease-in-out;
+    }
+    @keyframes rainbowGlow {
+      0% { box-shadow: 0 0 25px #ef4444, inset 0 0 15px #ef4444; }
+      33% { box-shadow: 0 0 30px #f59e0b, inset 0 0 20px #f59e0b; }
+      66% { box-shadow: 0 0 35px #10b981, inset 0 0 20px #10b981; }
+      100% { box-shadow: 0 0 40px #8b5cf6, inset 0 0 25px #8b5cf6; }
+    }
+
+    /* 浮動得分與誇獎文字動畫 */
+    @keyframes floatPraise {
+      0% { opacity: 0; transform: translate(-50%, 20px) scale(0.6); }
+      30% { opacity: 1; transform: translate(-50%, -15px) scale(1.25) rotate(-5deg); }
+      70% { opacity: 1; transform: translate(-50%, -35px) scale(1.1) rotate(5deg); }
+      100% { opacity: 0; transform: translate(-50%, -60px) scale(0.9); }
+    }
+
+    .floating-text {
+      position: absolute;
+      left: 50%;
+      top: 15%;
+      animation: floatPraise 0.85s ease-out forwards;
+      pointer-events: none;
+      z-index: 50;
+      white-space: nowrap;
+      text-shadow: 3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000;
+    }
+
+    /* 解鎖魔法鑰匙/愛心飛向籠子動畫 */
+    @keyframes flyToCage {
+      0% { opacity: 1; transform: translate(0, 0) scale(1.5); }
+      50% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1.8) rotate(360deg); }
+      100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.5); }
+    }
+    .magic-unlock-spark {
+      position: fixed;
+      pointer-events: none;
+      z-index: 99;
+      animation: flyToCage 0.75s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    /* 魔法籠子破裂特效 */
+    @keyframes cageBreak {
+      0% { transform: scale(1); filter: brightness(1); }
+      30% { transform: scale(1.25) rotate(8deg); filter: brightness(1.6); }
+      60% { transform: scale(0.9) rotate(-8deg); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+    .cage-shatter {
+      animation: cageBreak 0.6s ease-in-out;
+    }
+
+    /* 籠子輕微搖晃等待救援 */
+    @keyframes cageTrapped {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-3deg) translateY(-2px); }
+      75% { transform: rotate(3deg) translateY(1px); }
+    }
+    .cage-wiggle {
+      animation: cageTrapped 2.2s infinite ease-in-out;
+    }
+
+    /* 打擊粒子爆炸 (星星/愛心/糖果) */
+    @keyframes particleBurst {
+      0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+      100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(180deg); }
+    }
+    .particle {
+      position: absolute;
+      pointer-events: none;
+      z-index: 60;
+      animation: particleBurst 0.65s ease-out forwards;
+    }
+
+    /* 敲擊槌子動態揮擊特效 */
+    @keyframes hammerSmash {
+      0% { transform: scale(1) rotate(-40deg); opacity: 0.9; }
+      50% { transform: scale(1.2) rotate(20deg); opacity: 1; }
+      100% { transform: scale(0.8) rotate(35deg); opacity: 0; }
+    }
+    .hammer-effect {
+      position: absolute;
+      pointer-events: none;
+      font-size: 3rem;
+      z-index: 70;
+      animation: hammerSmash 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+    }
+
+    @keyframes floatGift {
+      0% { transform: translateY(0px) rotate(0deg) scale(1); }
+      50% { transform: translateY(-10px) rotate(8deg) scale(1.08); }
+      100% { transform: translateY(0px) rotate(0deg) scale(1); }
+    }
+    .gift-box-anim {
+      animation: floatGift 1.6s infinite ease-in-out;
+    }
+
+    .btn-bounce {
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn-bounce:active {
+      transform: scale(0.92) translateY(3px);
+      box-shadow: none !important;
+    }
+
+    .wood-board {
+      background: #d97706;
+      background-image: linear-gradient(to right, #b45309, #d97706, #b45309);
+      border: 4px solid #78350f;
+      box-shadow: 0 6px 0 #451a03, inset 0 2px 4px rgba(255,255,255,0.3);
+    }
+
+    /* 黃金地鼠發光 */
+    .golden-mole {
+      filter: drop-shadow(0 0 16px #facc15) brightness(1.25);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-amber-100 via-amber-200 to-emerald-100 min-h-screen flex flex-col items-center justify-center p-2 md:p-5 overflow-x-hidden">
+
+  <!-- Main Game Container -->
+  <div id="main-frame" class="w-full max-w-4xl bg-emerald-400 border-8 border-emerald-600 rounded-3xl p-3 md:p-6 shadow-2xl relative transition-all duration-300">
+
+    <!-- Top Status Bar: Level, XP, Rescue Badge, Lives -->
+    <div class="flex flex-wrap items-center justify-between bg-emerald-800/90 text-white p-2.5 px-4 rounded-2xl mb-3 border-2 border-emerald-300/40 text-sm md:text-base shadow-lg">
+      <div class="flex items-center gap-3">
+        <!-- 固定可愛救援隊徽章 -->
+        <div class="text-3xl md:text-4xl bg-amber-300 p-1.5 rounded-2xl border-2 border-amber-600 shadow flex items-center justify-center select-none">
+          🐾
+        </div>
+        <div>
+          <div class="font-black font-game text-yellow-300 text-base md:text-lg flex items-center gap-2">
+            <span>Rescue Hero</span>
+            <span class="bg-amber-500 text-xs text-white px-2 py-0.5 rounded-full font-sans shadow">Lv.<span id="player-level">1</span></span>
+          </div>
+          <!-- XP Bar -->
+          <div class="w-28 md:w-44 bg-emerald-950 rounded-full h-3.5 mt-1 overflow-hidden border border-emerald-400 p-0.5">
+            <div id="xp-bar" class="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-500 h-full w-0 rounded-full transition-all duration-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 md:gap-4 font-black font-game text-base md:text-xl">
+        <!-- Hearts -->
+        <div class="flex items-center gap-1.5 bg-emerald-900/80 px-3.5 py-1 rounded-xl border border-red-400/60 shadow">
+          <span id="lives-display">❤️❤️❤️</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 1. START / MAIN MENU ==================== -->
+    <div id="start-screen" class="flex flex-col items-center justify-center text-center py-3 space-y-4">
+      <div class="relative max-w-2xl">
+        <!-- 英文大標題 -->
+        <h1 class="text-3xl md:text-5xl font-black text-yellow-300 font-game drop-shadow-[0_4px_0_#b45309] tracking-wider animate-pulse">
+          🌲 Forest Animal Rescue Squad 🔨
+        </h1>
+        <!-- 英文副標題 + 中文輔助說明 -->
+        <div class="mt-2.5 inline-block bg-yellow-200/95 px-5 py-2 rounded-2xl shadow border border-amber-300">
+          <p class="text-emerald-950 font-black text-sm md:text-base tracking-wide font-game">
+            ✨ Tap the right English words to save our forest friends!
+          </p>
+          <p class="text-emerald-900 text-xs font-bold mt-0.5">
+            （敲擊正確英文單字，拯救森林好朋友！）
+          </p>
+        </div>
+      </div>
+
+      <!-- Settings Block -->
+      <div class="w-full max-w-xl space-y-4 bg-white/95 p-4 md:p-6 rounded-3xl shadow-xl border-3 border-emerald-300 text-left">
+        
+        <!-- Category Selection -->
+        <div>
+          <label class="block text-emerald-900 font-black text-base md:text-lg mb-2">🎯 選擇學習主題 (Topic)：</label>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="category-selector">
+            <button data-cat="animals" class="cat-btn bg-amber-400 border-b-4 border-amber-600 text-amber-950 font-bold py-2.5 px-2 rounded-2xl text-sm md:text-base btn-bounce text-center shadow">
+              🐶 動物 Animals
+            </button>
+            <button data-cat="fruits" class="cat-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2.5 px-2 rounded-2xl text-sm md:text-base btn-bounce text-center shadow">
+              🍎 水果 Fruits
+            </button>
+            <button data-cat="actions" class="cat-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2.5 px-2 rounded-2xl text-sm md:text-base btn-bounce text-center shadow">
+              🏃 動作 Actions
+            </button>
+            <button data-cat="colors" class="cat-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2.5 px-2 rounded-2xl text-sm md:text-base btn-bounce text-center shadow">
+              🎨 顏色 Colors
+            </button>
+          </div>
+        </div>
+
+        <!-- 槌子武器選擇 -->
+        <div>
+          <label class="block text-emerald-900 font-black text-base md:text-lg mb-2">🔨 挑選敲擊武器 (Weapon)：</label>
+          <div class="grid grid-cols-4 gap-2" id="weapon-selector">
+            <button data-weapon="🔨" class="weapon-btn bg-amber-400 border-b-4 border-amber-600 text-amber-950 font-bold py-2 px-1 rounded-2xl text-xs md:text-sm btn-bounce text-center shadow">
+              <span class="text-2xl block">🔨</span>木槌 Hammer
+            </button>
+            <button data-weapon="⭐" class="weapon-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2 px-1 rounded-2xl text-xs md:text-sm btn-bounce text-center shadow">
+              <span class="text-2xl block">⭐</span>星光棒 Wand
+            </button>
+            <button data-weapon="🥕" class="weapon-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2 px-1 rounded-2xl text-xs md:text-sm btn-bounce text-center shadow">
+              <span class="text-2xl block">🥕</span>胡蘿蔔 Carrot
+            </button>
+            <button data-weapon="🍭" class="weapon-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2 px-1 rounded-2xl text-xs md:text-sm btn-bounce text-center shadow">
+              <span class="text-2xl block">🍭</span>棒棒糖 Candy
+            </button>
+          </div>
+        </div>
+
+        <!-- Power-up Skill Selection -->
+        <div>
+          <label class="block text-emerald-900 font-black text-base md:text-lg mb-2">⚡ 裝備主動技能 (Skill)：</label>
+          <div class="grid grid-cols-3 gap-2" id="powerup-selector">
+            <button data-power="freeze" class="power-btn bg-amber-400 border-b-4 border-amber-600 text-amber-950 font-bold py-2 px-2 rounded-2xl text-xs md:text-sm btn-bounce flex items-center justify-center gap-1 shadow">
+              ⏱️ 時間凍結 (+10s)
+            </button>
+            <button data-power="shield" class="power-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2 px-2 rounded-2xl text-xs md:text-sm btn-bounce flex items-center justify-center gap-1 shadow">
+              🛡️ 愛心護盾 (Shield)
+            </button>
+            <button data-power="double" class="power-btn bg-emerald-100 border-b-4 border-emerald-400 text-emerald-950 font-bold py-2 px-2 rounded-2xl text-xs md:text-sm btn-bounce flex items-center justify-center gap-1 shadow" title="答對獲得雙倍分數與等級經驗值（XP）">
+              🕸️ 雙倍積分 (2x XP)
+            </button>
+          </div>
+          <p class="text-[11px] md:text-xs text-emerald-800 font-bold mt-1.5 flex items-center gap-1">
+            <span>💡 技能提示：</span>
+            <span>【🕸️ 雙倍積分】答對獲得雙倍分數與等級經驗值（XP）！</span>
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Quick Action Buttons: 遊戲規則說明 & 動物卡冊圖鑑 左右並排對稱 -->
+      <div class="flex gap-3 w-full max-w-md">
+        <button id="rules-btn" class="flex-1 bg-blue-500 hover:bg-blue-400 text-white font-black py-2.5 px-3 md:px-4 rounded-2xl border-b-4 border-blue-700 shadow-md btn-bounce text-sm md:text-base flex items-center justify-center gap-1.5">
+          📜 遊戲規則 How to Play
+        </button>
+        <button id="gallery-btn" class="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-black py-2.5 px-3 md:px-4 rounded-2xl border-b-4 border-amber-700 shadow-md btn-bounce text-sm md:text-base flex items-center justify-center gap-1.5">
+          📖 動物卡冊圖鑑 Book
+        </button>
+      </div>
+
+      <!-- Start Mission Button -->
+      <button id="start-btn" class="w-full max-w-xs bg-red-500 hover:bg-red-400 text-white font-black text-2xl md:text-3xl py-3.5 px-8 rounded-full border-b-8 border-red-700 shadow-2xl btn-bounce font-game tracking-wider">
+        🚀 Start Mission!
+      </button>
+    </div>
+
+    <!-- ==================== 2. GAMEPLAY SCREEN ==================== -->
+    <div id="game-screen" class="hidden flex-col items-center space-y-2.5">
+      
+      <!-- Top HUD (Score, Time, Combo Streak) -->
+      <div class="w-full flex flex-wrap items-center justify-between gap-2 bg-emerald-800/60 p-2 rounded-2xl border-2 border-emerald-300/50 shadow-md">
+        <!-- Score -->
+        <div class="wood-board px-3 py-1 rounded-xl text-white font-bold text-xs md:text-sm flex items-center gap-1.5">
+          <span>🏆 Score:</span>
+          <span id="score-display" class="text-yellow-300 font-game text-lg md:text-xl">0</span>
+        </div>
+
+        <!-- Combo Badge & Fever Indicator -->
+        <div id="combo-badge" class="bg-gradient-to-r from-purple-600 to-pink-600 text-yellow-300 font-game font-black px-3 py-1 rounded-xl text-xs md:text-sm border-2 border-yellow-300 hidden animate-bounce shadow">
+          🔥 <span id="combo-count">0</span>x COMBO!
+        </div>
+
+        <!-- Timer -->
+        <div class="wood-board px-3 py-1 rounded-xl text-white font-bold text-xs md:text-sm flex items-center gap-1.5">
+          <span>⏳ Time:</span>
+          <span id="timer-display" class="text-yellow-300 font-game text-lg md:text-xl">30</span>s
+        </div>
+      </div>
+
+      <!-- 每回合「待救援目標動物」與「魔法鎖救援進度條」 -->
+      <div id="rescue-mission-card" class="w-full bg-gradient-to-r from-amber-900/90 via-emerald-900/90 to-amber-900/90 border-3 border-amber-300/80 rounded-2xl p-2.5 md:p-3 text-white shadow-xl flex items-center justify-between gap-3 relative overflow-hidden transition-all duration-300">
+        <!-- 裝飾背景藤蔓 -->
+        <div class="absolute -right-4 -bottom-4 text-6xl opacity-15 pointer-events-none select-none">🌿</div>
+        
+        <!-- 左側：困在魔法籠中的目標動物 -->
+        <div class="flex items-center gap-3">
+          <div id="cage-icon-box" class="relative bg-amber-950/70 p-2 md:p-2.5 rounded-2xl border-2 border-amber-400 shadow-inner flex items-center justify-center cage-wiggle">
+            <span id="target-animal-emoji" class="text-3xl md:text-4xl filter drop-shadow">🦊</span>
+            <span id="cage-overlay-icon" class="absolute -top-1.5 -right-1.5 text-lg md:text-xl">🕸️</span>
+            <span id="lock-overlay-icon" class="absolute -bottom-1 -left-1 text-sm md:text-base">🔒</span>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="bg-red-500 text-white font-game text-xs px-2 py-0.5 rounded-full font-bold shadow animate-pulse">救援目標</span>
+              <span id="target-animal-name" class="font-black font-game text-base md:text-xl text-yellow-300 tracking-wide">小赤狐 Fox</span>
+            </div>
+            <div id="rescue-narrative-hint" class="text-xs text-amber-100/90 mt-0.5 font-bold">
+              ⚡ 敲對單字破除封印，解救牠脫困！
+            </div>
+          </div>
+        </div>
+
+        <!-- 右側：魔法鎖救援進度條 (答對 5 題打破封印) -->
+        <div class="w-36 md:w-56 flex flex-col items-end">
+          <div class="text-xs font-black font-game text-amber-200 mb-1 flex items-center gap-1">
+            <span>🔓 封印破解:</span>
+            <span id="rescue-progress-text" class="text-yellow-300 text-sm">0 / 5</span>
+          </div>
+          <div class="w-full bg-emerald-950/90 rounded-full h-3.5 border-2 border-amber-400/80 p-0.5 overflow-hidden shadow-inner">
+            <div id="rescue-progress-bar" class="bg-gradient-to-r from-yellow-400 via-amber-400 to-emerald-400 h-full w-0 rounded-full transition-all duration-300 shadow"></div>
+          </div>
+          <span id="rescue-status-badge" class="text-[11px] text-amber-200 font-bold mt-0.5">
+            還差 5 道封印解開 🔑
+          </span>
+        </div>
+      </div>
+
+      <!-- Prompt Banner (純聽力模式 Listening Mode & Audio & Chinese Toggle) -->
+      <div id="listening-card" class="w-full wood-board p-2.5 md:p-3 rounded-2xl text-center shadow-xl relative flex flex-wrap items-center justify-between gap-3 px-3 md:px-5 select-none cursor-pointer hover:brightness-105 active:scale-[0.99] transition" title="點擊任意處可重播發音 Listen Again">
+        <div class="flex items-center gap-3 flex-1 min-w-[220px]">
+          <!-- 顯眼可愛的大喇叭按鈕 -->
+          <button id="speak-btn" title="聽發音 Listen (點擊重播)" class="relative bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-500 hover:scale-105 active:scale-95 text-amber-950 p-2.5 md:p-3.5 rounded-2xl border-b-4 border-amber-700 shadow-lg transition flex items-center justify-center text-3xl md:text-4xl shrink-0 group">
+            <span id="speaker-icon" class="inline-block transition-transform duration-200">🔊</span>
+            <!-- 聲波擴散小動畫點綴 -->
+            <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-300 opacity-80"></span>
+              <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-yellow-400"></span>
+            </span>
+          </button>
+
+          <div class="text-left flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="bg-amber-900/90 text-yellow-300 text-xs px-2.5 py-0.5 rounded-full font-bold font-game border border-yellow-400/40">
+                🎧 純聽力挑戰 Listen & Tap
+              </span>
+              <!-- 中文提示切換按鈕 -->
+              <button id="toggle-zh-btn" class="bg-amber-900/80 hover:bg-amber-800 active:scale-95 text-yellow-200 text-xs px-2.5 py-0.5 rounded-lg border border-yellow-400/50 transition">
+                🇹🇼 中文提示：開
+              </button>
+            </div>
+
+            <!-- 純聽力指示語（不顯示任何英文單字與Emoji） -->
+            <div class="text-white font-black text-base md:text-xl font-game tracking-wide drop-shadow mt-0.5 flex items-baseline gap-1.5 flex-wrap">
+              <span>仔細聽，敲出正確單字！</span>
+              <span class="text-amber-200 text-xs font-sans font-bold">（點喇叭 🔊 可重播）</span>
+            </div>
+
+            <!-- 中文提示輔助區 (開時顯示中文，關時隱藏) -->
+            <div id="target-zh-hint" class="text-xs md:text-sm font-black text-yellow-300 mt-0.5 flex items-center gap-1.5">
+              <span class="bg-emerald-900/70 text-emerald-200 px-1.5 py-0.5 rounded border border-emerald-400/50 font-sans text-xs">💡 中文提示</span>
+              <span id="target-zh-text" class="text-sm md:text-base font-bold underline decoration-yellow-400 underline-offset-2">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trigger Power-up Button in-game -->
+        <button id="use-powerup-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-3.5 py-2 rounded-2xl border-b-4 border-indigo-900 text-xs md:text-sm flex flex-col items-center btn-bounce shadow-lg shrink-0">
+          <span id="powerup-icon" class="text-xl md:text-2xl">⏱️</span>
+          <span>使用技能</span>
+        </button>
+      </div>
+
+      <!-- Mole Holes Grid Container (完全無遮擋設計，同時保留上方單字牌與下方圖示) -->
+      <div id="grid-container" class="w-full grid grid-cols-3 gap-2.5 md:gap-3.5 p-2 md:p-3 bg-emerald-500/70 rounded-3xl border-4 border-emerald-700/60 relative select-none">
+        <button id="gift-box" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-40 gift-box-anim text-4xl bg-yellow-300 border-2 border-amber-600 p-2 rounded-2xl shadow-2xl cursor-pointer hover:scale-110 active:scale-90 transition">
+          🎁
+        </button>
+      </div>
+
+      <!-- Bottom Controls -->
+      <div class="w-full flex justify-between items-center text-xs md:text-sm">
+        <span class="text-emerald-950 font-bold bg-yellow-200/90 px-3 py-1 rounded-full shadow border border-amber-300">
+          💡 答對 5 次打破魔法鎖解救動物！黃金地鼠得 3x 經驗值！
+        </span>
+        <button id="quit-btn" class="bg-emerald-700 hover:bg-emerald-600 text-emerald-100 font-bold px-3 py-1.5 rounded-xl border-b-4 border-emerald-900 btn-bounce shadow">
+          ⚙️ 結束任務
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ==================== 3. EDUCATIONAL FEEDBACK MODAL ==================== -->
+    <div id="feedback-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl border-8 border-amber-400 p-5 md:p-7 max-w-md w-full text-center shadow-2xl space-y-4 animate-bounce-short">
+        <div class="text-4xl">🙈 Oops! 學習時間到！</div>
+        
+        <!-- Explanation Boxes -->
+        <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-3 text-left space-y-1 text-sm md:text-base">
+          <p class="font-bold text-red-700">你敲到的是：<span id="wrong-word-title" class="underline font-black text-lg">---</span></p>
+          <p class="text-gray-700" id="wrong-word-desc">它的意思是：...</p>
+        </div>
+
+        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-3 text-left space-y-1 text-sm md:text-base">
+          <p class="font-bold text-emerald-800">剛剛語音唸的正確單字是：<span id="correct-word-title" class="underline font-black text-lg">---</span></p>
+          <p class="text-gray-700" id="correct-word-desc">它的意思是：...</p>
+        </div>
+
+        <p class="text-amber-800 font-bold text-xs md:text-sm">
+          🌱 每次挑戰都是大腦在變聰明！深呼吸，再試一次！
+        </p>
+
+        <button id="resume-btn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-black text-xl py-3 rounded-2xl border-b-4 border-emerald-700 btn-bounce shadow-lg">
+          I got it! 繼續救援 🚀
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 4. MISSION RESULT SCREEN ==================== -->
+    <div id="result-screen" class="hidden flex-col items-center justify-center text-center py-4 space-y-4">
+      <div class="space-y-1">
+        <div id="result-stars" class="text-4xl md:text-5xl animate-bounce">
+          ⭐⭐⭐
+        </div>
+        <h2 id="result-title" class="text-2xl md:text-4xl font-black text-yellow-300 font-game drop-shadow-[0_4px_0_#b45309]">
+          Mission Accomplished!
+        </h2>
+      </div>
+
+      <!-- 專屬救援成功/失敗卡片展示 -->
+      <div id="rescue-outcome-card" class="w-full max-w-md bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-400 p-4 rounded-3xl shadow-xl border-4 border-amber-600 text-center space-y-2">
+        <div id="rescue-outcome-emoji" class="text-6xl animate-bounce">
+          🦊
+        </div>
+        <h3 id="rescue-outcome-title" class="text-xl md:text-2xl font-black text-amber-950 font-game">
+          🎉 成功救出 小赤狐 Fox！
+        </h3>
+        <p id="rescue-outcome-desc" class="text-xs md:text-sm text-amber-900 font-bold">
+          牠已經開心地回歸大自然，並永久收錄在你的【動物卡冊圖鑑】中！🏅
+        </p>
+      </div>
+
+      <!-- Result Stats Card -->
+      <div class="w-full max-w-md bg-white/95 p-4 rounded-3xl shadow-xl border-4 border-amber-400 space-y-2.5 text-left text-sm md:text-base">
+        <div class="flex justify-between items-center border-b pb-2 font-bold text-gray-700">
+          <span>Final Score 最終得分：</span>
+          <span id="final-score" class="text-2xl md:text-3xl font-black text-amber-600 font-game">0</span>
+        </div>
+        <div class="flex justify-between items-center border-b pb-2 font-bold text-gray-700">
+          <span>破除魔法封印進度：</span>
+          <span id="stat-rescue-progress" class="text-lg font-bold text-emerald-600">5 / 5 (100%)</span>
+        </div>
+        <div class="flex justify-between items-center border-b pb-2 font-bold text-gray-700">
+          <span>Max Combo 最高連擊：</span>
+          <span id="stat-combo" class="text-lg font-bold text-purple-600">0x</span>
+        </div>
+        <div class="flex justify-between items-center border-b pb-2 font-bold text-gray-700">
+          <span>Accuracy 命中準確率：</span>
+          <span id="stat-accuracy" class="text-lg font-bold text-blue-600">100%</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 w-full max-w-md">
+        <button id="restart-btn" class="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-black text-base md:text-lg py-2.5 rounded-2xl border-b-4 border-amber-700 shadow-lg btn-bounce">
+          🔄 拯救下一隻動物 Next
+        </button>
+        <button id="home-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base md:text-lg py-2.5 rounded-2xl border-b-4 border-emerald-800 shadow-lg btn-bounce">
+          🏠 主選單 Home
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 5. COLLECTION GALLERY MODAL ==================== -->
+    <div id="gallery-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-amber-50 rounded-3xl border-8 border-amber-500 p-4 md:p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center border-b-2 border-amber-200 pb-2">
+          <div>
+            <h3 class="text-2xl font-black text-amber-900 font-game flex items-center gap-2">
+              <span>📖 森林萌寵圖鑑 Safari Book</span>
+              <span id="gallery-counter" class="text-xs font-sans bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full font-bold">已救援: 0/10</span>
+            </h3>
+            <p class="text-xs text-amber-800 font-semibold mt-1">
+              ✨ 每一隻動物都需要你在救援任務中答對單字打破封印，才能成功解鎖收藏喔！
+            </p>
+          </div>
+          <button id="close-gallery-btn" class="text-2xl font-black text-gray-500 hover:text-gray-800">✖</button>
+        </div>
+
+        <!-- 動物卡片網格 -->
+        <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+      </div>
+    </div>
+
+    <!-- ==================== 6. 遊戲規則說明彈跳視窗 (RULES MODAL) ==================== -->
+    <div id="rules-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-amber-50 rounded-3xl border-8 border-blue-500 p-4 md:p-6 max-w-lg w-full max-h-[88vh] overflow-y-auto space-y-4 shadow-2xl animate-bounce-short text-left">
+        <!-- 標題與關閉按鈕 -->
+        <div class="flex justify-between items-center border-b-2 border-blue-200 pb-2">
+          <h3 class="text-xl md:text-2xl font-black text-blue-900 font-game flex items-center gap-2">
+            <span>📜 遊戲規則說明 How to Play</span>
+          </h3>
+          <button id="close-rules-btn" class="text-2xl font-black text-gray-500 hover:text-gray-800">✖</button>
+        </div>
+
+        <!-- 4 個核心規則條列卡片（字體大、圖示可愛清楚） -->
+        <div class="space-y-3 text-sm md:text-base">
+          
+          <!-- 規則 1 -->
+          <div class="flex items-start gap-3 bg-white p-3 rounded-2xl border-2 border-blue-200 shadow-sm">
+            <span class="text-3xl md:text-4xl select-none">👂</span>
+            <div>
+              <h4 class="font-black text-blue-900 font-game text-base md:text-lg">1. 聽音辨字 (Listen & Tap)</h4>
+              <p class="text-gray-700 text-xs md:text-sm mt-0.5 leading-relaxed">
+                仔細聽英文真人語音發音（點擊 🔊 大喇叭可隨時重複聽），在下方地鼠中敲擊對應的英文單字與圖示（可隨時開關中文輔助）。
+              </p>
+            </div>
+          </div>
+
+          <!-- 規則 2 -->
+          <div class="flex items-start gap-3 bg-white p-3 rounded-2xl border-2 border-emerald-200 shadow-sm">
+            <span class="text-3xl md:text-4xl select-none">🔨</span>
+            <div>
+              <h4 class="font-black text-emerald-900 font-game text-base md:text-lg">2. 敲擊救動物 (Tap to Rescue)</h4>
+              <p class="text-gray-700 text-xs md:text-sm mt-0.5 leading-relaxed">
+                在 30 秒內敲對 5 個正確單字，就能發射魔法鑰匙打破枷鎖，成功救出森林動物並永久收錄進圖鑑！
+              </p>
+            </div>
+          </div>
+
+          <!-- 規則 3 -->
+          <div class="flex items-start gap-3 bg-white p-3 rounded-2xl border-2 border-red-200 shadow-sm">
+            <span class="text-3xl md:text-4xl select-none">💖</span>
+            <div>
+              <h4 class="font-black text-red-900 font-game text-base md:text-lg">3. 愛心生命值 (3 Hearts)</h4>
+              <p class="text-gray-700 text-xs md:text-sm mt-0.5 leading-relaxed">
+                共有 3 顆愛心 ❤️❤️❤️。如果不小心敲錯單字會扣 1 顆心，愛心歸零或時間到未解開封印就會失敗喔！
+              </p>
+            </div>
+          </div>
+
+          <!-- 規則 4 -->
+          <div class="flex items-start gap-3 bg-white p-3 rounded-2xl border-2 border-amber-200 shadow-sm">
+            <span class="text-3xl md:text-4xl select-none">⚡</span>
+            <div>
+              <h4 class="font-black text-amber-900 font-game text-base md:text-lg">4. 救援小道具 (Power-ups)</h4>
+              <p class="text-gray-700 text-xs md:text-sm mt-0.5 leading-relaxed">
+                善用技能：「⏱️ 時間凍結 (+10秒)」、「🛡️ 愛心護盾 (抵擋一次敲錯)」、「🕸️ 雙倍積分 (答對獲得雙倍分數與XP)」幫助通關！
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 底部大按鈕 -->
+        <button id="got-it-rules-btn" class="w-full bg-blue-500 hover:bg-blue-400 text-white font-black text-lg md:text-xl py-3 rounded-2xl border-b-4 border-blue-700 btn-bounce shadow-lg font-game">
+          我知道了！(Got it!) 🚀
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* ==================== 擴充題庫 (包含中英文雙語對照) ==================== */
+    const wordBank = {
+      animals: [
+        { en: 'Dog', zh: '小狗', desc: 'A friendly pet that barks and wags its tail.', emoji: '🐶' },
+        { en: 'Cat', zh: '小貓', desc: 'A small pet that meows and likes to sleep.', emoji: '🐱' },
+        { en: 'Rabbit', zh: '小兔子', desc: 'A cute animal with long ears that hops around.', emoji: '🐰' },
+        { en: 'Monkey', zh: '小猴子', desc: 'A funny animal that loves swinging on trees and eating bananas.', emoji: '🐵' },
+        { en: 'Elephant', zh: '大象', desc: 'A huge wild animal with a very long trunk.', emoji: '🐘' },
+        { en: 'Bear', zh: '小熊', desc: 'A big furry animal that loves honey.', emoji: '🐻' },
+        { en: 'Lion', zh: '獅子', desc: 'The king of the jungle with a loud roar.', emoji: '🦁' },
+        { en: 'Duck', zh: '小鴨', desc: 'A bird that swims in ponds and says quack!', emoji: '🦆' },
+        { en: 'Frog', zh: '青蛙', desc: 'A green amphibian that loves jumping in ponds.', emoji: '🐸' },
+        { en: 'Fox', zh: '小狐狸', desc: 'A clever wild animal with a bushy tail.', emoji: '🦊' },
+        { en: 'Owl', zh: '貓頭鷹', desc: 'A wise nocturnal bird with big bright eyes.', emoji: '🦉' },
+        { en: 'Hedgehog', zh: '小刺蝟', desc: 'A tiny spiky friend that rolls into a ball.', emoji: '🦔' }
+      ],
+      fruits: [
+        { en: 'Apple', zh: '蘋果', desc: 'A sweet red or green crunchy fruit.', emoji: '🍎' },
+        { en: 'Banana', zh: '香蕉', desc: 'A long yellow fruit that monkeys love to eat.', emoji: '🍌' },
+        { en: 'Orange', zh: '橘子', desc: 'A round juicy citrus fruit full of Vitamin C.', emoji: '🍊' },
+        { en: 'Grape', zh: '葡萄', desc: 'Small round purple or green juicy fruits in clusters.', emoji: '🍇' },
+        { en: 'Watermelon', zh: '西瓜', desc: 'A large green fruit with sweet red juice inside.', emoji: '🍉' },
+        { en: 'Strawberry', zh: '草莓', desc: 'A red heart-shaped berry with tiny seeds on the outside.', emoji: '🍓' },
+        { en: 'Peach', zh: '水蜜桃', desc: 'A soft, sweet, and juicy pink fruit.', emoji: '🍑' },
+        { en: 'Pineapple', zh: '鳳梨', desc: 'A tropical sweet-and-sour fruit with a spiky crown.', emoji: '🍍' }
+      ],
+      actions: [
+        { en: 'Run', zh: '跑步', desc: 'Moving very fast on your feet.', emoji: '🏃' },
+        { en: 'Jump', zh: '跳躍', desc: 'Pushing yourself up into the air with your legs.', emoji: '🦘' },
+        { en: 'Sing', zh: '唱歌', desc: 'Making musical sounds with your voice.', emoji: '🎤' },
+        { en: 'Dance', zh: '跳舞', desc: 'Moving your body to the beat of music.', emoji: '💃' },
+        { en: 'Sleep', zh: '睡覺', desc: 'Resting your eyes in bed at night.', emoji: '😴' },
+        { en: 'Read', zh: '看書', desc: 'Looking at words in a book and understanding them.', emoji: '📖' },
+        { en: 'Swim', zh: '游泳', desc: 'Gliding through water using arms and legs.', emoji: '🏊' },
+        { en: 'Fly', zh: '飛翔', desc: 'Soaring high through the air like a bird.', emoji: '🕊️' }
+      ],
+      colors: [
+        { en: 'Red', zh: '紅色', desc: 'The bright color of apples and fire trucks.', emoji: '🔴' },
+        { en: 'Blue', zh: '藍色', desc: 'The color of the clear sky and deep ocean water.', emoji: '🔵' },
+        { en: 'Yellow', zh: '黃色', desc: 'The cheerful color of the bright sun and bananas.', emoji: '🟡' },
+        { en: 'Green', zh: '綠色', desc: 'The color of fresh grass and tree leaves.', emoji: '🟢' },
+        { en: 'Purple', zh: '紫色', desc: 'A royal color made by mixing red and blue.', emoji: '🟣' },
+        { en: 'Pink', zh: '粉紅色', desc: 'A soft, cute color of blooming cherry blossoms.', emoji: '🌸' }
+      ]
+    };
+
+    /* ==================== 圖鑑資料庫（全靠救援解鎖） ==================== */
+    const collectionCards = [
+      { id: 'c1', name: '柴犬小寶', en: 'Shiba Dog', emoji: '🐶', rescued: false },
+      { id: 'c2', name: '元氣小貓', en: 'Kitty Cat', emoji: '🐱', rescued: false },
+      { id: 'c3', name: '雪白萌兔', en: 'White Bunny', emoji: '🐰', rescued: false },
+      { id: 'c4', name: '調皮小猴', en: 'Playful Monkey', emoji: '🐵', rescued: false },
+      { id: 'c5', name: '溫柔大象', en: 'Gentle Elephant', emoji: '🐘', rescued: false },
+      { id: 'c6', name: '森林獅王', en: 'Forest Lion', emoji: '🦁', rescued: false },
+      { id: 'c7', name: '聰明小狐', en: 'Clever Fox', emoji: '🦊', rescued: false },
+      { id: 'c8', name: '夜行貓頭鷹', en: 'Wise Owl', emoji: '🦉', rescued: false },
+      { id: 'c9', name: '圓滾小刺蝟', en: 'Spiky Hedgehog', emoji: '🦔', rescued: false },
+      { id: 'c10', name: '溫暖小棕熊', en: 'Honey Bear', emoji: '🐻', rescued: false }
+    ];
+
+    /* ==================== 升級版音效合成器 ==================== */
+    class SoundEffects {
+      constructor() { this.ctx = null; }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+
+      playPop() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(250, now);
+        osc.frequency.exponentialRampToValueAtTime(650, now + 0.08);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.1);
+      }
+
+      playHit() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [523.25, 783.99].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.07);
+          gain.gain.setValueAtTime(0.2, now + i * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.07 + 0.15);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.07); osc.stop(now + i * 0.07 + 0.15);
+        });
+      }
+
+      playUnlock() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [659.25, 880, 1174.66].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.08);
+          gain.gain.setValueAtTime(0.18, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.18);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.08); osc.stop(now + i * 0.08 + 0.18);
+        });
+      }
+
+      playRescueSuccess() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.1);
+          gain.gain.setValueAtTime(0.25, now + i * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.35);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.1); osc.stop(now + i * 0.1 + 0.35);
+        });
+      }
+
+      playMiss() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(200, now + 0.18);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.2);
+      }
+
+      playPowerup() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [350, 440, 587, 880].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.06);
+          gain.gain.setValueAtTime(0.18, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.06 + 0.2);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.06); osc.stop(now + i * 0.06 + 0.2);
+        });
+      }
+
+      playFever() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [400, 500, 600, 800, 1000].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.05);
+          gain.gain.setValueAtTime(0.15, now + i * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.25);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.25);
+        });
+      }
+    }
+    const sfx = new SoundEffects();
+
+    const praiseWords = [
+      '🌟 Awesome! 破除一道封印!',
+      '🔥 Super Star! 封印碎裂!',
+      '🎉 Bingo! 動物快脫困了!',
+      '💖 Genius! 魔法減弱中!',
+      '🚀 Amazing! 救援英雄!',
+      '👏 Perfect! 封印瓦解!'
+    ];
+
+    /* ==================== 遊戲狀態 ==================== */
+    let currentCategory = 'animals';
+    let currentWeapon = '🔨';
+    let equippedPowerup = 'freeze';
+    let showChineseHint = true;
+
+    let score = 0;
+    let xp = 0;
+    let playerLevel = 1;
+    let lives = 3;
+    let comboStreak = 0;
+    let maxCombo = 0;
+    let timeLeft = 30;
+    let timerInterval = null;
+    let molePopTimeout = null;
+    let currentTarget = null;
+    let hitsCount = 0;
+    let missesCount = 0;
+    let isPlaying = false;
+    let powerupUsed = false;
+    let isFever = false;
+
+    // 救援目標動物與救援進度 (5 題即可救援)
+    let currentRescueAnimal = null;
+    let rescueProgress = 0;
+    const rescueGoal = 5;
+    let isAnimalRescuedThisRound = false;
+
+    /* ==================== DOM 元素綁定 ==================== */
+    const mainFrame = document.getElementById('main-frame');
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const feedbackModal = document.getElementById('feedback-modal');
+    const galleryModal = document.getElementById('gallery-modal');
+    const rulesModal = document.getElementById('rules-modal');
+
+    const startBtn = document.getElementById('start-btn');
+    const quitBtn = document.getElementById('quit-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const homeBtn = document.getElementById('home-btn');
+    const speakBtn = document.getElementById('speak-btn');
+    const resumeBtn = document.getElementById('resume-btn');
+    const usePowerupBtn = document.getElementById('use-powerup-btn');
+    const giftBoxBtn = document.getElementById('gift-box');
+    const toggleZhBtn = document.getElementById('toggle-zh-btn');
+
+    const rulesBtn = document.getElementById('rules-btn');
+    const closeRulesBtn = document.getElementById('close-rules-btn');
+    const gotItRulesBtn = document.getElementById('got-it-rules-btn');
+
+    const gridContainer = document.getElementById('grid-container');
+    const scoreDisplay = document.getElementById('score-display');
+    const timerDisplay = document.getElementById('timer-display');
+    const listeningCard = document.getElementById('listening-card');
+    const speakerIcon = document.getElementById('speaker-icon');
+    const targetZhHint = document.getElementById('target-zh-hint');
+    const targetZhText = document.getElementById('target-zh-text');
+    const comboBadge = document.getElementById('combo-badge');
+    const comboCount = document.getElementById('combo-count');
+
+    // 救援目標相關元素
+    const targetAnimalEmoji = document.getElementById('target-animal-emoji');
+    const targetAnimalName = document.getElementById('target-animal-name');
+    const cageIconBox = document.getElementById('cage-icon-box');
+    const cageOverlayIcon = document.getElementById('cage-overlay-icon');
+    const lockOverlayIcon = document.getElementById('lock-overlay-icon');
+    const rescueProgressText = document.getElementById('rescue-progress-text');
+    const rescueProgressBar = document.getElementById('rescue-progress-bar');
+    const rescueStatusBadge = document.getElementById('rescue-status-badge');
+    const rescueMissionCard = document.getElementById('rescue-mission-card');
+
+    /* ==================== 事件監聽設定 ==================== */
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.cat-btn').forEach(b => {
+          b.classList.remove('bg-amber-400', 'border-amber-600');
+          b.classList.add('bg-emerald-100', 'border-emerald-400');
+        });
+        const t = e.currentTarget;
+        t.classList.remove('bg-emerald-100', 'border-emerald-400');
+        t.classList.add('bg-amber-400', 'border-amber-600');
+        currentCategory = t.dataset.cat;
+      });
+    });
+
+    document.querySelectorAll('.weapon-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.weapon-btn').forEach(b => {
+          b.classList.remove('bg-amber-400', 'border-amber-600');
+          b.classList.add('bg-emerald-100', 'border-emerald-400');
+        });
+        const t = e.currentTarget;
+        t.classList.remove('bg-emerald-100', 'border-emerald-400');
+        t.classList.add('bg-amber-400', 'border-amber-600');
+        currentWeapon = t.dataset.weapon;
+      });
+    });
+
+    document.querySelectorAll('.power-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.power-btn').forEach(b => {
+          b.classList.remove('bg-amber-400', 'border-amber-600');
+          b.classList.add('bg-emerald-100', 'border-emerald-400');
+        });
+        const t = e.currentTarget;
+        t.classList.remove('bg-emerald-100', 'border-emerald-400');
+        t.classList.add('bg-amber-400', 'border-amber-600');
+        equippedPowerup = t.dataset.power;
+        updatePowerupUI();
+      });
+    });
+
+    toggleZhBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showChineseHint = !showChineseHint;
+      toggleZhBtn.textContent = `🇹🇼 中文提示：${showChineseHint ? '開' : '關'}`;
+      if (currentTarget) updateTargetDisplay();
+    });
+
+    startBtn.addEventListener('click', startGame);
+    quitBtn.addEventListener('click', endGame);
+    restartBtn.addEventListener('click', startGame);
+    homeBtn.addEventListener('click', showHomeScreen);
+    speakBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playTargetTTS();
+    });
+    listeningCard.addEventListener('click', () => {
+      playTargetTTS();
+    });
+    resumeBtn.addEventListener('click', () => {
+      feedbackModal.classList.add('hidden');
+      if (isPlaying) popMolesLoop();
+    });
+
+    // 圖鑑彈窗
+    document.getElementById('gallery-btn').addEventListener('click', openGallery);
+    document.getElementById('close-gallery-btn').addEventListener('click', () => galleryModal.classList.add('hidden'));
+
+    // 規則彈窗監聽
+    rulesBtn.addEventListener('click', () => rulesModal.classList.remove('hidden'));
+    closeRulesBtn.addEventListener('click', () => rulesModal.classList.add('hidden'));
+    gotItRulesBtn.addEventListener('click', () => rulesModal.classList.add('hidden'));
+
+    usePowerupBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      activatePowerup();
+    });
+    giftBoxBtn.addEventListener('click', openMysteryGift);
+
+    /* ==================== 核心遊戲邏輯 ==================== */
+
+    // 每回合挑選「待救援目標動物」
+    function assignRescueTarget() {
+      const unrescuedList = collectionCards.filter(c => !c.rescued);
+      if (unrescuedList.length > 0) {
+        currentRescueAnimal = unrescuedList[Math.floor(Math.random() * unrescuedList.length)];
+      } else {
+        currentRescueAnimal = collectionCards[Math.floor(Math.random() * collectionCards.length)];
+      }
+
+      rescueProgress = 0;
+      isAnimalRescuedThisRound = false;
+
+      targetAnimalEmoji.textContent = currentRescueAnimal.emoji;
+      targetAnimalName.textContent = `${currentRescueAnimal.name} (${currentRescueAnimal.en})`;
+      cageOverlayIcon.textContent = '🕸️';
+      cageOverlayIcon.classList.remove('hidden');
+      lockOverlayIcon.textContent = '🔒';
+      lockOverlayIcon.classList.remove('hidden');
+
+      cageIconBox.className = 'relative bg-amber-950/70 p-2 md:p-2.5 rounded-2xl border-2 border-amber-400 shadow-inner flex items-center justify-center cage-wiggle';
+      rescueMissionCard.className = 'w-full bg-gradient-to-r from-amber-900/90 via-emerald-900/90 to-amber-900/90 border-3 border-amber-300/80 rounded-2xl p-2.5 md:p-3 text-white shadow-xl flex items-center justify-between gap-3 relative overflow-hidden transition-all duration-300';
+
+      updateRescueProgressUI();
+    }
+
+    function updateRescueProgressUI() {
+      const percentage = Math.min(100, Math.round((rescueProgress / rescueGoal) * 100));
+      rescueProgressBar.style.width = `${percentage}%`;
+      rescueProgressText.textContent = `${rescueProgress} / ${rescueGoal}`;
+
+      if (rescueProgress >= rescueGoal) {
+        rescueStatusBadge.innerHTML = '<span class="text-green-300 font-black animate-pulse">🎉 魔法封印已瓦解！救援成功！</span>';
+      } else {
+        const remaining = rescueGoal - rescueProgress;
+        rescueStatusBadge.textContent = `還差 ${remaining} 道封印解開 🔑`;
+      }
+    }
+
+    function startGame() {
+      sfx.init();
+      score = 0;
+      lives = 3;
+      comboStreak = 0;
+      maxCombo = 0;
+      timeLeft = 30;
+      hitsCount = 0;
+      missesCount = 0;
+      isPlaying = true;
+      powerupUsed = false;
+      isFever = false;
+
+      assignRescueTarget();
+
+      mainFrame.classList.remove('fever-active');
+      usePowerupBtn.classList.remove('opacity-50', 'pointer-events-none');
+
+      updateHUD();
+      updatePowerupUI();
+
+      startScreen.classList.add('hidden');
+      startScreen.classList.remove('flex');
+      resultScreen.classList.add('hidden');
+      resultScreen.classList.remove('flex');
+      gameScreen.classList.remove('hidden');
+      gameScreen.classList.add('flex');
+
+      setupGrid();
+      generateNextQuestion();
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = timeLeft;
+        if (timeLeft <= 0) endGame();
+      }, 1000);
+
+      clearTimeout(molePopTimeout);
+      popMolesLoop();
+
+      if (Math.random() < 0.7) {
+        setTimeout(() => {
+          if (isPlaying) giftBoxBtn.classList.remove('hidden');
+        }, 7000 + Math.random() * 9000);
+      }
+    }
+
+    function setupGrid() {
+      gridContainer.innerHTML = '';
+      gridContainer.appendChild(giftBoxBtn);
+
+      for (let i = 0; i < 9; i++) {
+        const hole = document.createElement('div');
+        hole.className = 'mole-container aspect-square relative rounded-3xl dirt-hole flex items-center justify-center p-1.5 md:p-2 cursor-pointer shadow-inner';
+        hole.dataset.index = i;
+
+        hole.innerHTML = `
+          <div class="mole absolute inset-0 flex flex-col items-center justify-center p-2 z-10 pointer-events-auto select-none">
+            <div class="word-tag bg-white text-emerald-950 font-black text-sm md:text-xl px-2.5 py-1 rounded-2xl border-2 md:border-3 border-emerald-600 shadow-md mb-1 max-w-full text-center font-game tracking-wider">
+              ---
+            </div>
+            <div class="mole-avatar text-4xl md:text-6xl drop-shadow-lg transform transition active:scale-90">
+              🐹
+            </div>
+          </div>
+        `;
+
+        const moleEl = hole.querySelector('.mole');
+        moleEl.addEventListener('mousedown', (e) => handleWhack(e, hole));
+        moleEl.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          handleWhack(e, hole);
+        });
+
+        gridContainer.appendChild(hole);
+      }
+    }
+
+    function updateTargetDisplay() {
+      if (!currentTarget) return;
+      if (showChineseHint) {
+        targetZhHint.classList.remove('hidden');
+        targetZhText.textContent = currentTarget.zh;
+      } else {
+        targetZhHint.classList.add('hidden');
+      }
+    }
+
+    function generateNextQuestion() {
+      const bank = wordBank[currentCategory];
+      const randomIndex = Math.floor(Math.random() * bank.length);
+      currentTarget = bank[randomIndex];
+
+      updateTargetDisplay();
+      playTargetTTS();
+    }
+
+    function playTargetTTS() {
+      if ('speechSynthesis' in window && currentTarget) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(currentTarget.en);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.82;
+        utterance.pitch = 1.1;
+
+        if (speakerIcon) {
+          speakerIcon.classList.add('scale-125');
+          utterance.onend = () => speakerIcon.classList.remove('scale-125');
+          utterance.onerror = () => speakerIcon.classList.remove('scale-125');
+        }
+
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function popMolesLoop() {
+      if (!isPlaying) return;
+
+      const holes = document.querySelectorAll('.mole-container');
+      const holeIndex = Math.floor(Math.random() * holes.length);
+      const hole = holes[holeIndex];
+      const mole = hole.querySelector('.mole');
+
+      if (!mole.classList.contains('up')) {
+        const bank = wordBank[currentCategory];
+        const isTarget = Math.random() < 0.55;
+        const isGolden = Math.random() < 0.18;
+
+        let chosenWord = isTarget ? currentTarget : bank[Math.floor(Math.random() * bank.length)];
+
+        const tag = mole.querySelector('.word-tag');
+        const avatar = mole.querySelector('.mole-avatar');
+
+        tag.textContent = chosenWord.en;
+        mole.dataset.word = chosenWord.en;
+        mole.dataset.golden = isGolden;
+
+        if (isGolden) {
+          avatar.textContent = '🌟' + (chosenWord.emoji || '🐹');
+          mole.classList.add('golden-mole');
+        } else {
+          avatar.textContent = chosenWord.emoji || '🐹';
+          mole.classList.remove('golden-mole');
+        }
+
+        mole.classList.remove('hit');
+        mole.classList.add('up');
+        sfx.playPop();
+
+        const popDuration = isFever ? 900 : 1200;
+        setTimeout(() => {
+          if (mole.classList.contains('up')) mole.classList.remove('up');
+        }, popDuration);
+      }
+
+      const nextLoopDelay = isFever ? 850 : 1150;
+      molePopTimeout = setTimeout(popMolesLoop, nextLoopDelay);
+    }
+
+    function handleWhack(e, hole) {
+      if (!isPlaying) return;
+
+      const mole = hole.querySelector('.mole');
+      if (!mole.classList.contains('up') || mole.classList.contains('hit')) return;
+
+      spawnHammerEffect(hole, e);
+
+      const clickedWord = mole.dataset.word;
+      const isGolden = mole.dataset.golden === 'true';
+      mole.classList.add('hit');
+
+      if (clickedWord === currentTarget.en) {
+        sfx.playHit();
+        spawnParticles(hole);
+
+        spawnMagicSparkToCage(hole);
+
+        if (rescueProgress < rescueGoal) {
+          rescueProgress++;
+          sfx.playUnlock();
+          updateRescueProgressUI();
+
+          if (rescueProgress >= rescueGoal && !isAnimalRescuedThisRound) {
+            isAnimalRescuedThisRound = true;
+            sfx.playRescueSuccess();
+
+            cageIconBox.classList.remove('cage-wiggle');
+            cageIconBox.classList.add('cage-shatter');
+            cageOverlayIcon.classList.add('hidden');
+            lockOverlayIcon.classList.add('hidden');
+
+            rescueMissionCard.className = 'w-full bg-gradient-to-r from-emerald-600 via-amber-500 to-emerald-600 border-4 border-yellow-300 rounded-2xl p-2.5 md:p-3 text-white shadow-2xl flex items-center justify-between gap-3 relative overflow-hidden transition-all duration-300 scale-102';
+            showFloatingEffect(gridContainer, `🎉 救出 ${currentRescueAnimal.name}！`, 'text-yellow-300');
+          }
+        }
+
+        // 雙倍積分技能效果：答對獲得雙倍分數與雙倍經驗值 (XP)
+        let pts = (equippedPowerup === 'double' && powerupUsed) ? 20 : 10;
+        if (isFever) pts *= 2;
+        if (isGolden) pts *= 3;
+
+        let gainedXP = (equippedPowerup === 'double' && powerupUsed) ? pts * 2 : pts;
+
+        score += pts;
+        hitsCount++;
+        comboStreak++;
+        if (comboStreak > maxCombo) maxCombo = comboStreak;
+
+        if (comboStreak >= 3 && !isFever) {
+          isFever = true;
+          mainFrame.classList.add('fever-active');
+          sfx.playFever();
+          showFloatingEffect(gridContainer, '🌈 FEVER TIME! 雙倍狂歡!', 'text-pink-300');
+        }
+
+        const randomPraise = praiseWords[Math.floor(Math.random() * praiseWords.length)];
+        showFloatingEffect(hole, `+${pts} ${randomPraise}`, 'text-yellow-300');
+
+        addXP(gainedXP);
+        updateHUD();
+
+        setTimeout(() => {
+          mole.classList.remove('up');
+          generateNextQuestion();
+        }, 220);
+
+      } else {
+        sfx.playMiss();
+        clearTimeout(molePopTimeout);
+
+        missesCount++;
+        isFever = false;
+        mainFrame.classList.remove('fever-active');
+
+        if (equippedPowerup === 'shield' && powerupUsed) {
+          showFloatingEffect(hole, '🛡️ 愛心護盾保護了你！', 'text-blue-300');
+          powerupUsed = false;
+        } else {
+          lives--;
+          comboStreak = 0;
+        }
+
+        updateHUD();
+
+        const wrongWordObj = wordBank[currentCategory].find(w => w.en === clickedWord) || { en: clickedWord, zh: '干擾字', desc: '這是一個容易混淆的小搗蛋單字喔！' };
+        
+        document.getElementById('wrong-word-title').textContent = `${wrongWordObj.emoji || ''} ${wrongWordObj.en} (${wrongWordObj.zh || ''})`;
+        document.getElementById('wrong-word-desc').textContent = wrongWordObj.desc;
+        document.getElementById('correct-word-title').textContent = `${currentTarget.emoji || ''} ${currentTarget.en} (${currentTarget.zh || ''})`;
+        document.getElementById('correct-word-desc').textContent = currentTarget.desc;
+
+        feedbackModal.classList.remove('hidden');
+        playTargetTTS();
+
+        if (lives <= 0) {
+          feedbackModal.classList.add('hidden');
+          endGame();
+        }
+      }
+    }
+
+    function spawnMagicSparkToCage(startHole) {
+      const startRect = startHole.getBoundingClientRect();
+      const cageRect = cageIconBox.getBoundingClientRect();
+
+      const spark = document.createElement('div');
+      spark.className = 'magic-unlock-spark text-2xl md:text-3xl';
+      spark.textContent = '✨🔑';
+      spark.style.left = `${startRect.left + startRect.width / 2}px`;
+      spark.style.top = `${startRect.top + startRect.height / 2}px`;
+
+      const targetX = cageRect.left + cageRect.width / 2 - (startRect.left + startRect.width / 2);
+      const targetY = cageRect.top + cageRect.height / 2 - (startRect.top + startRect.height / 2);
+
+      spark.style.setProperty('--dx', `${targetX * 0.4}px`);
+      spark.style.setProperty('--dy', `${targetY * 0.3 - 40}px`);
+      spark.style.setProperty('--tx', `${targetX}px`);
+      spark.style.setProperty('--ty', `${targetY}px`);
+
+      document.body.appendChild(spark);
+      setTimeout(() => spark.remove(), 750);
+    }
+
+    function spawnHammerEffect(parent, e) {
+      const hammer = document.createElement('div');
+      hammer.className = 'hammer-effect';
+      hammer.textContent = currentWeapon;
+      
+      const rect = parent.getBoundingClientRect();
+      const x = (e.clientX ? (e.clientX - rect.left) : (rect.width / 2)) - 25;
+      const y = (e.clientY ? (e.clientY - rect.top) : (rect.height / 2)) - 35;
+      
+      hammer.style.left = `${x}px`;
+      hammer.style.top = `${y}px`;
+      parent.appendChild(hammer);
+      setTimeout(() => hammer.remove(), 260);
+    }
+
+    function spawnParticles(parent) {
+      const icons = ['⭐', '✨', '🌟', '💖', '🎈', '🎉'];
+      for (let i = 0; i < 8; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle text-lg md:text-2xl';
+        p.textContent = icons[Math.floor(Math.random() * icons.length)];
+        
+        const angle = (Math.PI * 2 * i) / 8 + (Math.random() * 0.4);
+        const distance = 40 + Math.random() * 50;
+        p.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+        p.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+        p.style.left = '50%';
+        p.style.top = '40%';
+
+        parent.appendChild(p);
+        setTimeout(() => p.remove(), 650);
+      }
+    }
+
+    function activatePowerup() {
+      if (powerupUsed || !isPlaying) return;
+      powerupUsed = true;
+      sfx.playPowerup();
+
+      if (equippedPowerup === 'freeze') {
+        timeLeft += 10;
+        timerDisplay.textContent = timeLeft;
+        showFloatingEffect(gridContainer, '⏱️ 時間凍結 +10 秒!', 'text-blue-300');
+      } else if (equippedPowerup === 'shield') {
+        showFloatingEffect(gridContainer, '🛡️ 愛心護盾啟動中!', 'text-emerald-300');
+      } else if (equippedPowerup === 'double') {
+        showFloatingEffect(gridContainer, '🕸️ 雙倍積分與XP啟動中!', 'text-purple-300');
+      }
+      usePowerupBtn.classList.add('opacity-50', 'pointer-events-none');
+    }
+
+    function openMysteryGift() {
+      giftBoxBtn.classList.add('hidden');
+      sfx.playPowerup();
+      const bonusPts = 50;
+      score += bonusPts;
+      addXP(30);
+      updateHUD();
+      showFloatingEffect(gridContainer, `🎁 驚喜加分 +${bonusPts} 分！`, 'text-yellow-300');
+    }
+
+    function addXP(amount) {
+      xp += amount;
+      if (xp >= 100) {
+        playerLevel++;
+        xp -= 100;
+        showFloatingEffect(gridContainer, '🎉 恭喜小英雄升級！', 'text-yellow-300');
+      }
+      document.getElementById('player-level').textContent = playerLevel;
+      document.getElementById('xp-bar').style.width = `${Math.min(100, xp)}%`;
+    }
+
+    function updateHUD() {
+      scoreDisplay.textContent = score;
+      document.getElementById('lives-display').textContent = '❤️'.repeat(Math.max(0, lives));
+
+      if (comboStreak >= 2) {
+        comboBadge.classList.remove('hidden');
+        comboCount.textContent = comboStreak;
+      } else {
+        comboBadge.classList.add('hidden');
+      }
+    }
+
+    function updatePowerupUI() {
+      const icon = document.getElementById('powerup-icon');
+      if (equippedPowerup === 'freeze') icon.textContent = '⏱️';
+      else if (equippedPowerup === 'shield') icon.textContent = '🛡️';
+      else if (equippedPowerup === 'double') icon.textContent = '🕸️';
+    }
+
+    function showFloatingEffect(parent, text, colorClass) {
+      const floatEl = document.createElement('div');
+      floatEl.className = `floating-text font-black text-xl md:text-2xl font-game ${colorClass}`;
+      floatEl.textContent = text;
+      parent.appendChild(floatEl);
+      setTimeout(() => floatEl.remove(), 850);
+    }
+
+    function endGame() {
+      isPlaying = false;
+      isFever = false;
+      mainFrame.classList.remove('fever-active');
+      clearInterval(timerInterval);
+      clearTimeout(molePopTimeout);
+
+      const totalAttempts = hitsCount + missesCount;
+      const accuracy = totalAttempts > 0 ? Math.round((hitsCount / totalAttempts) * 100) : 0;
+
+      const rescueSuccess = rescueProgress >= rescueGoal;
+      const outcomeCard = document.getElementById('rescue-outcome-card');
+      const outcomeEmoji = document.getElementById('rescue-outcome-emoji');
+      const outcomeTitle = document.getElementById('rescue-outcome-title');
+      const outcomeDesc = document.getElementById('rescue-outcome-desc');
+
+      if (rescueSuccess) {
+        currentRescueAnimal.rescued = true;
+
+        outcomeCard.className = 'w-full max-w-md bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-300 p-4 rounded-3xl shadow-xl border-4 border-amber-500 text-center space-y-1.5';
+        outcomeEmoji.textContent = currentRescueAnimal.emoji;
+        outcomeTitle.innerHTML = `🎉 救援大成功！你救出了【${currentRescueAnimal.name}】！`;
+        outcomeDesc.innerHTML = `🌟 成功破除 5 道魔法鎖！<strong>${currentRescueAnimal.name} (${currentRescueAnimal.en})</strong> 已解鎖收錄至你的圖鑑，獲得 <span class="text-amber-800 font-black">🏅 已救援成功</span> 勳章！`;
+
+        document.getElementById('result-stars').textContent = '⭐⭐⭐';
+        document.getElementById('result-title').textContent = 'Mission Accomplished!';
+      } else {
+        outcomeCard.className = 'w-full max-w-md bg-gradient-to-r from-red-100 via-amber-50 to-red-100 p-4 rounded-3xl shadow-xl border-4 border-red-300 text-center space-y-1.5';
+        outcomeEmoji.textContent = '🙈';
+        outcomeTitle.innerHTML = `差一點點！【${currentRescueAnimal.name}】還在籠子裡...`;
+        outcomeDesc.innerHTML = `你已經打破了 ${rescueProgress}/${rescueGoal} 道封印！深呼吸，再試一次就能完全解開魔法救出牠喔！`;
+
+        document.getElementById('result-stars').textContent = rescueProgress >= 3 ? '⭐⭐' : '⭐';
+        document.getElementById('result-title').textContent = 'Try Again!';
+      }
+
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('stat-rescue-progress').textContent = `${rescueProgress} / ${rescueGoal} (${Math.round((rescueProgress/rescueGoal)*100)}%)`;
+      document.getElementById('stat-combo').textContent = `${maxCombo}x`;
+      document.getElementById('stat-accuracy').textContent = `${accuracy}%`;
+
+      gameScreen.classList.add('hidden');
+      gameScreen.classList.remove('flex');
+      resultScreen.classList.remove('hidden');
+      resultScreen.classList.add('flex');
+    }
+
+    function showHomeScreen() {
+      isPlaying = false;
+      isFever = false;
+      mainFrame.classList.remove('fever-active');
+      clearInterval(timerInterval);
+      clearTimeout(molePopTimeout);
+
+      resultScreen.classList.add('hidden');
+      resultScreen.classList.remove('flex');
+      gameScreen.classList.add('hidden');
+      gameScreen.classList.remove('flex');
+      startScreen.classList.remove('hidden');
+      startScreen.classList.add('flex');
+    }
+
+    function openGallery() {
+      const grid = document.getElementById('gallery-grid');
+      grid.innerHTML = '';
+
+      const rescuedCount = collectionCards.filter(c => c.rescued).length;
+      document.getElementById('gallery-counter').textContent = `已救援: ${rescuedCount}/${collectionCards.length}`;
+
+      collectionCards.forEach(card => {
+        const item = document.createElement('div');
+        item.className = 'bg-white p-3 rounded-2xl border-2 border-amber-300 text-center space-y-1.5 shadow-md flex flex-col justify-between';
+
+        let badgeHtml = '';
+        let actionBtnHtml = '';
+
+        if (card.rescued) {
+          badgeHtml = '<span class="inline-block bg-amber-100 text-amber-900 border border-amber-400 font-black text-xs px-2.5 py-0.5 rounded-full shadow-sm">🏅 已救援成功</span>';
+          actionBtnHtml = '<div class="bg-emerald-500 text-white font-black text-xs py-1.5 px-2 rounded-xl w-full shadow">✨ 自由生活在森林</div>';
+        } else {
+          badgeHtml = '<span class="inline-block bg-red-100 text-red-700 border border-red-300 font-bold text-xs px-2.5 py-0.5 rounded-full shadow-sm">🕸️ 困在籠中</span>';
+          actionBtnHtml = '<div class="bg-gray-100 text-gray-500 font-bold text-xs py-1.5 px-2 rounded-xl w-full border border-gray-200">🔒 闖關救援解鎖</div>';
+        }
+
+        item.innerHTML = `
+          <div>
+            <div class="text-4xl py-1 transform transition hover:scale-110">${card.rescued ? card.emoji : '🔒'}</div>
+            <div class="font-bold text-xs md:text-sm text-gray-800">${card.name}</div>
+            <div class="text-xs text-gray-500 font-mono font-bold">${card.en}</div>
+            <div class="mt-1">${badgeHtml}</div>
+          </div>
+
+          <div class="mt-2">
+            ${actionBtnHtml}
+          </div>
+        `;
+
+        grid.appendChild(item);
+      });
+
+      galleryModal.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
